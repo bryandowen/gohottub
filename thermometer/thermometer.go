@@ -30,5 +30,8 @@ func getTemperatureCelsius(sensor string) float64 {
 }
 
 func celsiusToFahrenheit(tempC float64) float64 {
-	return tempC * 9/5 + 32;
+	tf := tempC * 9/5 + 32;
+	tf *= 100;
+	itf := int(tf);
+	return float64(itf)/float64(100);
 }

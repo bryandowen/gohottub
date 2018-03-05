@@ -32,6 +32,12 @@ func (q *Queue) IsEmpty() bool {
 	return len(q.values) == 0
 }
 
+func (q *Queue) Drain() {
+	for !q.IsEmpty() {
+		q.Dequeue();
+	}
+}
+
 func (q *Queue) Inspect() []float64 {
 	return q.values;
 }

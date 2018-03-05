@@ -1,96 +1,77 @@
 package relays
 
 import (
-	"github.com/stianeikeland/go-rpio"
+	"github.com/stianeikeland/go-rpio";
+	"strings";
 )
 
-const HEATER_PIN = 5;
-const LIGHT_PIN = 6;
-const JETS_PIN = 26;
-const COLD_BLOWER_PIN = 19;
-const HOT_BLOWER_PIN = 13;
-const PIN_OFF = rpio.High; // Seems backward, but a LOW turns the relay on
-const PIN_ON = rpio.Low;   // and a HIGH turns the relay off
+const PinOff = rpio.High; // Seems backward, but a LOW turns the relay on and HIGH turns it off
+const PinOn = rpio.Low;
+const PullMode = rpio.PullUp;
 
+type pin struct {
+	name string;
+	rpioPin rpio.Pin;
+}
+
+var pins []pin;
 
 func Init() {
-	pinHeater := rpio.Pin(HEATER_PIN);
-	pinHeater.PullUp();
-	pinHeater.Output();
-	pinLight := rpio.Pin(LIGHT_PIN);
-	pinLight.PullUp();
-	pinLight.Output();
-	pinJets := rpio.Pin(JETS_PIN);
-	pinLight.PullUp();
-	pinLight.Output();
-	pinColdBlower := rpio.Pin(COLD_BLOWER_PIN);
-	pinColdBlower.PullUp();
-	pinColdBlower.Output();
-	pinHotBlower := rpio.Pin(HOT_BLOWER_PIN);
-	pinHotBlower.PullUp();
-	pinHotBlower.Output();
-	HeaterOff();
-	:ightOff();
-	JetsOff();
-	ColdBlowerOff();
-	HotBlowerOff();
+	if err := rpio.Open(); err != nil { panic(err);	}
+
+	pins = []pin {
+		{"Heater", rpio.Pin(5)},
+		{"Light", rpio.Pin(6)},
+		{"Jets", rpio.Pin(26)},
+		{"ColdBlower", rpio.Pin(19)},
+		{"HotBlower", rpio.Pin(13)},
+	}
+
+	for _, p := range pins {
+		rpio.PinMode(p.rpioPin, rpio.Output);      // Mode = Output
+		rpio.PullMode(p.rpioPin, PullMode); // PullUp = pin off if floating
+		SetPinOff(p.name);
+	}
 }
 
-func HeaterOn() {
-	pinHeater.Write(PIN_ON);
-}
-
-func HeaterOff() {
-	pinHeater.Write(PIN_OFF);
-}
-
-func LightOn() {
-	pinLight.Write(PIN_ON);
-}
-
-func LightOff() {
-	pinLight.Write(PIN_OFF);
-}
-
-func JetsOn() {
-	pinJets.Write(PIN_ON);
-}
-
-func JetsOff() {
-	pinJets.Write(PIN_OFF);
-}
-
-func ColdBlowerOn() {
-	pinColdBlower.Write(PIN_ON);
-}
-
-func ColdBlowerOff() {
-	pinColdBlower.Write(PIN_OFF);
-}
-
-func HotBlowerOn() {
-	pinHotBlower.Write(PIN_ON);
-}
-
-func HotBlowerOff() {
-	pinHotBlower.Write(PIN_OFF);
+func CleanUp() {
+	// Turn all pins off and unmap GPIO memory range
+	AllPinsOff();
+	rpio.Close();
 }
 
 func AllPinsOff() {
-	heaterOff();
-	lightOff();
-	jetsOff();
-	coldBlowerOff();
-	hotBlowerOff();
+	for _, p := range pins {
+		rpio.WritePin(p.rpioPin, PinOff);
+	}
 }
 
-func readPin
-func ReadAllPins() []pinState {
-	
+func FindPin(name string) pin {
+	for _, p := range pins {
+		if strings.ToLower(p.name) == strings.ToLower(name) {
+			return p;
+			break;
+		}
+	}
+	panic("Couldn't find pin " + name);
 }
 
-type pinState struct {
-	name string;
-	pinNumber int;
-	state bool;
+func SetPinOff(name string) {
+	FindPin(name).rpioPin.Write(PinOff);
+}
+
+func SetPinOn(name string) {
+	FindPin(name).rpioPin.Write(PinOn);
+}
+
+func SetPin(n string, s bool) {
+	if s {
+		SetPinOn(n);
+	} else {
+		SetPinOff(n);
+	}
+}
+
+func ReadPin(name string) rpio.State {
+	return FindPin(name).rpioPin.Read();
 }
