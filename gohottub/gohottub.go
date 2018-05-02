@@ -15,7 +15,7 @@ import (
 	"github.com/bryandowen/queue";
 	"github.com/bryandowen/relays";
 	"github.com/bryandowen/thermometer";
-	_ "github.com/davecgh/go-spew/spew"; // for debugging!
+//	"github.com/davecgh/go-spew/spew"; // for debugging!
 );
 
 // Constants
@@ -25,8 +25,8 @@ const TempLimit float64 = 103.5 //degrees (safety limit)
 const DefaultTempTarget float64 = 102.0 //default; overwritten by ThingSpeak
 const UpperTempWindow float64 = 0.5;
 const LowerTempWindow float64 = 0.5;
-const HeatingTempDipDelay int = 5 //minutes
-const SuitableSampleSize int = 10 //minutes
+const HeatingTempDipDelay int64 = 5 //minutes
+const SuitableSampleSize int64 = 10 //minutes
 
 // TODO: Abstract Thingspeak into a separate package
 const ThingspeakUrlBase string = "https://api.thingspeak.com";
@@ -43,9 +43,7 @@ const AlertWriteUrl string = ThingspeakUrlBase + "/update?api_key=" + AlertWrite
 func init() {
 	log.SetFormatter(&log.TextFormatter{});
 	log.SetOutput(os.Stdout);
-	log.SetLevel(log.DebugLevel);
-	// Log levels: Debug, Info, Warn, Error, Fatal, Panic
-	// Log.WithFields(log.Fields{"key": "value", "key": value,})
+	log.SetLevel(log.DebugLevel); // Debug, Info, Warn, Error, Fatal, Panic
 	relays.Init();
 }
 
@@ -71,12 +69,17 @@ func main() {
 	go logData(dataChan);
 	go logAlert(alertChan);
 
-	// TODO: .2f formatting in all FormatFloat operations?
-	// TODO: Wait for suitable temp window, and refrain during heater dip period
-
 	for {//evar
 		// Kick off temperature and command reads
+		s.statusMessage = "";
 		s.cycleCounter++;
+		if s.HeaterState() && s.cycleCounter == HeatingTempDipDelay {
+			// We give a grace period after the heater kicks on because the temperature
+			// immediately drops due to de-stratification in the tub, and the water in
+			// the heater plumbing cooling quicker than that in the tub
+			s.q.Drain();
+			log.Debug("Drained temperature queue after " + strconv.FormatInt(HeatingTempDipDelay, 10) + " readings");
+		}
 		commChan <- nil // prompt command goroutine to read commands
 		s.temperature = thermometer.GetTemperatureF();
 		dataChan <- s.GetDataChan();
@@ -84,50 +87,55 @@ func main() {
 		s.q.Enqueue(s.temperature);
 
 		// Shut down if temp is too high!
-		if s.temperature > TempLimit {
+		if s.isSafe && s.HeaterState() && s.temperature > TempLimit {
 			// TODO: Should this go in a separate goroutine?
 			log.Warn("Uh-oh! Temp > 104; shutting down!");
-			shutdown(s, alertChan, fmt.Sprintf("Temperature exceeds limit (%.2f)", TempLimit));
+			shutdown(&s, alertChan, fmt.Sprintf("Temperature exceeds limit (%.2f)", TempLimit));
 		}
 
 		// Alert/shutdown if temp rate is out of whack
 		heatRate := s.HeatRate();
 		log.Info("Heat rate: " + strconv.FormatFloat(heatRate, 'f', 2, 64));
-		switch s.HeaterState() {
-			case true: //heating
-				log.Debug("Mode: Heating");
-				switch {
-					case heatRate >= 9.0:
-						log.Debug("Heating greater than 9deg/hr. : This is insanely fast");
-						shutdown(s, alertChan, "Heating over 9deg/hr.!! (Not sure what this even means.)");
-					case heatRate >= 5:
-						log.Debug("Heating greater than 5deg/hr. : Heating normally");
-						s.alertMessage = "Heating normally";
-					case heatRate >= 1:
-						log.Debug("Heating greater than 1deg/hr. : Cover likely open (heating slowly)");
-						s.alertMessage = "Heating slowly; cover likely open";
-					default:
-						log.Debug("Heating less than 1deg/hr. : Heating too slow, shutting down (check thermometer and over-temp switch)");
-						shutdown(s, alertChan, "Heating too slowly (over-temp button? thermometer in tub?)");
-				}
-			//}
-			case false: //cooling
-				log.Debug("Mode: Cooling");
-				switch {
-					case heatRate > 2.5:
-						log.Debug("Heating greater than 2.5deg/hr. : Should be cooling, but is heating");
-						s.alertMessage = "Should be cooling, but is heating"; // TODO: shutdown?
-					case heatRate > -2:
-						log.Debug("Cooling less than 2deg/hr. : Cooling normally");
-						s.alertMessage = "Cooling normally";
-					case heatRate > -15:
-						log.Debug("Cooling less than 15deg/hr. : Cover likely open");
-						s.alertMessage = "Cover likely open (cooling quickly)";
-					default:
-						log.Debug("Cooling over 15deg/hr.!! : Thermometer likely fallen out");
-						shutdown(s, alertChan, "Cooling too fast (thermometer in tub?)");
-				}
-			//}
+
+		if s.cycleCounter > SuitableSampleSize {
+			switch s.HeaterState() {
+				case true: //heating
+					log.Debug("Mode: Heating");
+					switch {
+						case heatRate >= 9.0:
+							log.Debug("Heating greater than 9deg/hr. : This is insanely fast");
+							shutdown(&s, alertChan, "Heating over 9deg/hr.!! (Not sure what this even means.)");
+						case heatRate >= 5:
+							log.Debug("Heating greater than 5deg/hr. : Heating normally");
+							s.statusMessage = "Heating normally";
+						case heatRate >= 1:
+							log.Debug("Heating greater than 1deg/hr. : Cover likely open (heating slowly)");
+							s.statusMessage = "Heating slowly; cover likely open";
+						default:
+							log.Debug("Heating less than 1deg/hr. : Heating too slow, shutting down (check thermometer and over-temp switch)");
+							shutdown(&s, alertChan, "Heating too slowly (over-temp button? thermometer in tub?)");
+					}
+				//}
+				case false: //cooling
+					log.Debug("Mode: Cooling");
+					switch {
+						case heatRate > 2.5:
+							log.Debug("Heating greater than 2.5deg/hr. : Should be cooling, but is heating");
+							s.statusMessage = "Should be cooling, but is heating"; // TODO: shutdown?
+						case heatRate > -2:
+							log.Debug("Cooling less than 2deg/hr. : Cooling normally");
+							s.statusMessage = "Cooling normally";
+						case heatRate > -15:
+							log.Debug("Cooling less than 15deg/hr. : Cover likely open");
+							s.statusMessage = "Cover likely open (cooling quickly)";
+						default:
+							log.Debug("Cooling over 15deg/hr.!! : Thermometer likely fallen out");
+							shutdown(&s, alertChan, "Cooling too fast (thermometer in tub?)");
+					}
+				//}
+			}
+		} else {
+			log.Debug("Skipping alert/shutdown checks for another " + strconv.FormatInt(SuitableSampleSize - s.cycleCounter, 10) + " readings.");
 		}
 
 		// Process commands read from Thingspeak
@@ -148,13 +156,15 @@ func main() {
 			log.Info("Loop error: " + strconv.FormatFloat(loopError, 'f', 2, 64));
 			if s.HeaterState() {
 				if loopError < (0-UpperTempWindow) { // e.g., drops to -0.6 w/ window of 0.5
-					turnHeaterOff(s);
+					turnHeaterOff(&s);
 				}
 			} else {//cooling
 				if loopError > LowerTempWindow {
-					turnHeaterOn(s);
+					turnHeaterOn(&s);
 				}
 			}
+		} else {
+			log.Debug("Not regulating temperature; hot tub is in Safe Mode");
 		}
 
 		// Now wait for next clock tick
@@ -166,27 +176,34 @@ func main() {
 	}
 }
 
-func turnHeaterOn(s hotTubState) {
+func turnHeaterOn(s *hotTubState) {
 	relays.SetPinOn("heater"); // de facto backing "variable" for s.HeaterState()
 	s.q.Drain();
+	s.cycleCounter = 0;
 	log.Info("Turned heater on");
 	log.Info("*** s.Heater: " + strconv.FormatBool(s.HeaterState()) + "***");
 }
 
-func turnHeaterOff(s hotTubState) {
+func turnHeaterOff(s *hotTubState) {
 	relays.SetPinOff("heater");
 	s.q.Drain();
+	s.cycleCounter = 0;
 	log.Info("Turned heater off");
 }
 
-func shutdown(s hotTubState, alertChan chan *tsAlert, msg string) {
+func shutdown(s *hotTubState, alertChan chan *tsAlert, msg string) {
 	log.Warn("Shutting down");
+	turnHeaterOff(s);
 	s.isSafe = false;
-	s.alertMessage = msg;
+	s.statusMessage = msg;
 	alertChan <- &tsAlert{Message: msg};
 }
 
 // TODO: Factor all goroutines into another package
+// TODO: Move to a model where a goroutine provides a temperature feed to (at least) a couple
+//   others, which watch (a) whether to turn on/off the heater, (b) whether we're heating or
+//   cooling too fast (on a long queue) and (c) whether the thermometer has likely fallen out
+//   of the tub (on a short queue) (e.g., 3 readings, and if the spread is > 1 degree?
 
 func callHttp(u string) (string, int) {
 	// Make call
@@ -199,9 +216,6 @@ func callHttp(u string) (string, int) {
 	buf.ReadFrom(resp.Body);
 
 	// React to 429 (rate limit exceeded); TODO: Something more graceful, like a retry
-//	fmt.Println("Called: " + u);
-//	fmt.Println("Response code: " + strconv.FormatInt(int64(status), 10));
-//	fmt.Println("Body: " + buf.String());
 	if status == http.StatusTooManyRequests {
 		panic("Exceeded Thingspeak rate limit");
 	}
@@ -240,7 +254,7 @@ func readCommands(commChan chan *tsCommands) {
 		r := csv.NewReader(strings.NewReader(body));
 		records, err := r.ReadAll(); if err != nil { panic(err); }
 		if len(records) != 2 || len(records[0]) < 8 {
-			panic("Invalid commands response from ThingSpeak (record too short or narrow)");
+			panic("Invalid commands response from ThingSpeak (record too short or narrow):" + body);
 		}
 
 		// Assimilate response into channel struct
@@ -264,19 +278,19 @@ type tsData struct {
 	Light bool `field4`;
 	ColdBlower bool `field5`;
 	HotBlower bool `field6`;
-	AlertMessage string `field7`;
+	StatusMessage string `field7`;
 	HeatRate float64 `field8`;
 }
 func (t *tsData) PrettyPrint() string {
 	s := "tsData:\n";
-	s += "    Temperature  : " + strconv.FormatFloat(t.Temperature, 'f', 2, 64) + "\n";
-	s += "    Heater       : " + strconv.FormatBool(t.Heater) + "\n";
-	s += "    Jets         : " + strconv.FormatBool(t.Jets) + "\n";
-	s += "    Light        : " + strconv.FormatBool(t.Light) + "\n";
-	s += "    ColdBlower   : " + strconv.FormatBool(t.ColdBlower) + "\n";
-	s += "    HotBlower    : " + strconv.FormatBool(t.HotBlower) + "\n";
-	s += "    AlertMessage : " + t.AlertMessage + "\n";
-	s += "    HeatRate     : " + strconv.FormatFloat(t.HeatRate, 'f', 2, 64) + "\n";
+	s += "    Temperature   : " + strconv.FormatFloat(t.Temperature, 'f', 2, 64) + "\n";
+	s += "    Heater        : " + strconv.FormatBool(t.Heater) + "\n";
+	s += "    Jets          : " + strconv.FormatBool(t.Jets) + "\n";
+	s += "    Light         : " + strconv.FormatBool(t.Light) + "\n";
+	s += "    ColdBlower    : " + strconv.FormatBool(t.ColdBlower) + "\n";
+	s += "    HotBlower     : " + strconv.FormatBool(t.HotBlower) + "\n";
+	s += "    StatusMessage : " + t.StatusMessage + "\n";
+	s += "    HeatRate      : " + strconv.FormatFloat(t.HeatRate, 'f', 2, 64) + "\n";
 	return s;
 }
 
@@ -284,7 +298,7 @@ func (t *tsData) PrettyPrint() string {
 func logData(dataChan chan *tsData) {
 	for {//evar
 		d := <- dataChan // Wait for trigger to log temperature to Thingspeak
-		u := fmt.Sprintf("%s&field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field6=%s&field7=%s&field8=%s", DataWriteUrl, url.QueryEscape(strconv.FormatFloat(d.Temperature, 'f', 2, 64)), boolToNumString(d.Heater), boolToNumString(d.Jets), boolToNumString(d.Light), boolToNumString(d.ColdBlower), boolToNumString(d.HotBlower), url.QueryEscape(d.AlertMessage), url.QueryEscape(strconv.FormatFloat(d.HeatRate, 'f', 2, 64)));
+		u := fmt.Sprintf("%s&field1=%s&field2=%s&field3=%s&field4=%s&field5=%s&field6=%s&field7=%s&field8=%s", DataWriteUrl, url.QueryEscape(strconv.FormatFloat(d.Temperature, 'f', 2, 64)), boolToNumString(d.Heater), boolToNumString(d.Jets), boolToNumString(d.Light), boolToNumString(d.ColdBlower), boolToNumString(d.HotBlower), url.QueryEscape(d.StatusMessage), url.QueryEscape(strconv.FormatFloat(d.HeatRate, 'f', 2, 64)));
 		callHttp(u); // Write-only call
 	}
 }
@@ -315,7 +329,7 @@ type hotTubState struct {
 	targetTemperature float64;
 	q *queue.Queue;
 	cycleCounter int64;
-	alertMessage string;
+	statusMessage string;
 	isSafe bool;
 }
 func (h *hotTubState) PrettyPrint() string {
@@ -328,7 +342,7 @@ func (h *hotTubState) PrettyPrint() string {
 	s += "    LightState()      : " + strconv.FormatBool(h.LightState()) + "\n";
 	s += "    ColdBlowerState() : " + strconv.FormatBool(h.ColdBlowerState()) + "\n";
 	s += "    HotBlowerState()  : " + strconv.FormatBool(h.HotBlowerState()) + "\n";
-	s += "    alertMessage      : " + h.alertMessage + "\n";
+	s += "    statusMessage     : " + h.statusMessage + "\n";
 	s += "    cycleCounter      : " + strconv.FormatInt(h.cycleCounter, 10) + "\n";
 	s += "    q                 : [length: " + strconv.FormatInt(int64(len(h.q.Inspect())), 10) + "]\n";
 	for i, qn := range h.q.Inspect() {
@@ -396,7 +410,7 @@ func (h *hotTubState) GetDataChan() *tsData {
 		Light: relays.ReadPin("light") == relays.PinOn,
 		ColdBlower: relays.ReadPin("coldblower") == relays.PinOn,
 		HotBlower: relays.ReadPin("hotblower") == relays.PinOn,
-		AlertMessage: h.alertMessage,
+		StatusMessage: h.statusMessage,
 		HeatRate: h.HeatRate(),
 	}
 }

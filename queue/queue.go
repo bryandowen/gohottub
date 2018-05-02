@@ -1,35 +1,39 @@
 package queue;
 
 type Queue struct {
-	maxSize int;
+	maxSize int64;
 	values []float64;
 }
 
-func New(size int) *Queue {
-	queue := &Queue{};
-	queue.maxSize = size;
-	return queue;
+func (q *Queue) Length() int64 {
+	return int64(len(q.values));
+}
+
+func New(size int64) *Queue {
+	q := &Queue{};
+	q.maxSize = size;
+	return q;
 }
 
 func (q *Queue) Enqueue(node float64) {
 	q.values = append(q.values, node);
-	for len(q.values) > q.maxSize {
+	for q.Length() > q.maxSize {
 		_ = q.Dequeue();
 	}
 }
 
 func (q *Queue) Dequeue() float64 {
-	var val float64
+	var val float64;
 	if q.IsEmpty() {
-		return 0.0
+		return 0.0;
 	}
-	val = q.values[0]
-	q.values = q.values[1:]
-	return val
+	val = q.values[0];
+	q.values = q.values[1:];
+	return val;
 }
 
 func (q *Queue) IsEmpty() bool {
-	return len(q.values) == 0
+	return q.Length() == 0;
 }
 
 func (q *Queue) Drain() {
