@@ -87,7 +87,7 @@ func main() {
 		s.q.Enqueue(s.temperature);
 
 		// Shut down if temp is too high!
-		if s.isSafe && s.HeaterState() && s.temperature > TempLimit {
+		if s.HeaterState() && s.temperature > TempLimit {
 			// TODO: Should this go in a separate goroutine?
 			log.Warn("Uh-oh! Temp > 104; shutting down!");
 			shutdown(&s, alertChan, fmt.Sprintf("Temperature exceeds limit (%.2f)", TempLimit));
