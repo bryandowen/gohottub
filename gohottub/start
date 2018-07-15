@@ -1,0 +1,7 @@
+#!/bin/bash
+
+until /home/pi/gohottub/gohottub >> /var/log/gohottub/gohottub.log; do
+	echo "GoHotTub crashed with exit code $?. Respawning..." >> /var/log/gohottub/gohottub.log
+	sleep 1
+done
+

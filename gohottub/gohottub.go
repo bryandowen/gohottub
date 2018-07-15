@@ -257,13 +257,19 @@ func readCommands(commChan chan *tsCommands) {
 			panic("Invalid commands response from ThingSpeak (record too short or narrow):" + body);
 		}
 
+		const temperatureField = 2;
+		const jetsField = 3;
+		const lightField = 4;
+		const coldBlowerField = 5;
+		const hotBlowerField = 6
+
 		// Assimilate response into channel struct
 		cc := tsCommands{};
-		cc.TargetTemperature, err = strconv.ParseFloat(records[1][2], 64);
-		cc.TargetJets, err = strconv.ParseBool(records[1][3]);
-		cc.TargetLight, err = strconv.ParseBool(records[1][4]);
-		cc.TargetColdBlower, err = strconv.ParseBool(records[1][5]);
-		cc.TargetHotBlower, err = strconv.ParseBool(records[1][6]);
+		cc.TargetTemperature, err = strconv.ParseFloat(records[1][temperatureField], 64);
+		cc.TargetJets, err = strconv.ParseBool(records[1][jetsField]);
+		cc.TargetLight, err = strconv.ParseBool(records[1][lightField]);
+		cc.TargetColdBlower, err = strconv.ParseBool(records[1][coldBlowerField]);
+		cc.TargetHotBlower, err = strconv.ParseBool(records[1][hotBlowerField]);
 
 		log(cc.PrettyPrint());
 
