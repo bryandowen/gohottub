@@ -1,0 +1,3 @@
+#!/bin/bash
+GOOS=linux GOARCH=arm GOARM=7 go build ./gohottub.go
+scp ./gohottub pi@192.168.0.101:~/gohottub
