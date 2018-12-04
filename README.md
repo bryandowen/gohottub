@@ -15,32 +15,32 @@ This is very specific to my personal hot tub configuration:
 INSTALLATION
 
 To run (just scripts+binary [and code]):
-$ mkdir ~/go/src/github.com/bryandowen
-$ cd ~/go/src/github.com/bryandowen
-$ git clone https://github.com/bryandowen/gohottub
-$ sudo mkdir /var/log/gohottub
-$ sudo chown pi:pi /var/log/gohottub
-$ sudo echo "dtoverlay=w1-gpio" >> /boot/config.txt
-$ sudo modprobe wire
-$ sudo modprobe w1-gpio
-$ sudo modprobe w1-therm
-$ sudo reboot now
-$ cd go/src/github.com/bryandowen/gohottub
-$ ./start &
+- $ mkdir ~/go/src/github.com/bryandowen
+- $ cd ~/go/src/github.com/bryandowen
+- $ git clone https://github.com/bryandowen/gohottub
+- $ sudo mkdir /var/log/gohottub
+- $ sudo chown pi:pi /var/log/gohottub
+- $ sudo echo "dtoverlay=w1-gpio" >> /boot/config.txt
+- $ sudo modprobe wire
+- $ sudo modprobe w1-gpio
+- $ sudo modprobe w1-therm
+- $ sudo reboot now
+- $ cd go/src/github.com/bryandowen/gohottub
+- $ ./start &
 
 TODO: Making it run automatically on reboot
 
 For development:
-$ cd ..
-$ mkdir stianeikeland
-$ cd stianeikeland
-$ git clone https://github.com/stianeikeland/go-rpio
-$ cd ..
-$ mkdir yryz
-$ cd yryz
-$ git clone https://github.com/yryz/ds18b20
-$ cd ..
-$ cd bryandowen/gohottub
-$ go build ./gohottub.go
-$ sudo apt-get update
-$ sudo apt-get install golang # installs 1.7, latest is 1.9 :-\
+- $ cd ..
+- $ mkdir stianeikeland
+- $ cd stianeikeland
+- $ git clone https://github.com/stianeikeland/go-rpio
+- $ cd ..
+- $ mkdir yryz
+- $ cd yryz
+- $ git clone https://github.com/yryz/ds18b20
+- $ cd ..
+- $ cd bryandowen/gohottub
+- $ go build ./gohottub.go
+- $ sudo apt-get update
+- $ sudo apt-get install golang # installs 1.7, latest is 1.9 :-\
