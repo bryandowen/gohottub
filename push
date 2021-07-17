@@ -1,0 +1,7 @@
+#!/bin/bash
+GOOS=linux GOARCH=arm GOARM=7 go build -o ./gohottub/gohottub ./gohottub/gohottub.go
+if [ $? -eq 0 ]; then
+  scp ./gohottub/gohottub pi@192.168.0.101:~/gohottub
+else
+  echo "Build failed :-("
+fi
