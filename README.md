@@ -27,7 +27,11 @@ To run (just scripts+binary [and code]):
 - $ sudo modprobe w1-therm
 - $ sudo reboot now
 - $ cd go/src/github.com/bryandowen/gohottub
-- $ ./start &
+- $ ./start & # beware: hard-coded directory may not be correct
+- # if this script errors out:
+- $ fg 1 # bring disconnected process back to current session
+- <CTRL+C>
+- # then edit start to correct directories. Sorry, I'll clean this up later.
 
 TODO: Making it run automatically on reboot
 
@@ -41,7 +45,7 @@ For development:
 - $ cd yryz
 - $ git clone https://github.com/yryz/ds18b20
 - $ cd ..
-- $ cd bryandowen/gohottub
+- $ cd bryandowen/gohottub/gohottub
 - $ sudo apt-get update # if Go not installed already
 - $ sudo apt-get install golang # if Go not installed already
 - $ go build ./gohottub.go
