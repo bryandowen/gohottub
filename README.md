@@ -19,8 +19,8 @@ To run (just scripts+binary [and code]):
 - $ cd ~/go/src/github.com/bryandowen
 - $ git clone https://github.com/bryandowen/gohottub
 - $ sudo mkdir /var/log/gohottub
-- $ sudo chown pi:pi /var/log/gohottub
-- $ sudo echo "dtoverlay=w1-gpio" >> /boot/config.txt
+- $ sudo chown ${USER}i:${USER} /var/log/gohottub
+- $ sudo echo "dtoverlay=w1-gpio" >> /boot/firmware/config.txt
 - $ sudo modprobe wire
 - $ sudo modprobe w1-gpio
 - $ sudo modprobe w1-therm
