@@ -17,6 +17,7 @@ INSTALLATION
 To run (just scripts+binary [and code]):
 - $ mkdir ~/go/src/github.com/bryandowen
 - $ cd ~/go/src/github.com/bryandowen
+- $ sudo apt-get install git # if git not installed already
 - $ git clone https://github.com/bryandowen/gohottub
 - $ sudo mkdir /var/log/gohottub
 - $ sudo chown ${USER}:${USER} /var/log/gohottub
@@ -41,6 +42,6 @@ For development:
 - $ git clone https://github.com/yryz/ds18b20
 - $ cd ..
 - $ cd bryandowen/gohottub
+- $ sudo apt-get update # if Go not installed already
+- $ sudo apt-get install golang # if Go not installed already
 - $ go build ./gohottub.go
-- $ sudo apt-get update
-- $ sudo apt-get install golang # installs 1.7, latest is 1.9 :-\
