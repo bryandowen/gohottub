@@ -34,7 +34,7 @@ cd go/src/github.com/bryandowen/gohottub
 #### If this script errors out:
 ```
 fg 1
-<CTRL_+C>
+<CTRL+C>
 ```
 ... then edit start to correct directories. Sorry, I'll clean this up later.
 
