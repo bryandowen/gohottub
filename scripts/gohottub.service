@@ -1,0 +1,14 @@
+[Unit]
+Description=Hot tub control service
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/pi/go/src/github.com/bryandowen/gohottub/gohottub
+Restart=always
+StandardOutput=append:/var/log/gohottub/gohottub.log
+StandardError=append:/var/log/gohottub/gohottub.log
+
+[Install]
+WantedBy=multi-user.target

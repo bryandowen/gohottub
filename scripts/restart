@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+	echo "This script must be run as root. Please try again with 'sudo $0'."
+	exit 1
+else
+	htPID=$(ps aux | grep '[p]ython' | grep 'HotTub' | awk '{print $2}')
+	kill -9 $htPID
+	sleep 1
+	htPID2=$(ps aux | grep '[p]ython' | grep 'HotTub' | awk '{print $2}')
+	if [[ $htPID -ne $htPID2 ]]; then
+		echo Old process [$htPID] replaced with new process [$htPID2].
+		exit 0
+	else
+		echo Process not killed!
+		exit 1
+	fi
+fi
