@@ -11,9 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bryandowen/gohottub/queue"
-	"github.com/bryandowen/gohottub/relays"
-	"github.com/bryandowen/gohottub/thermometer"
+	//"github.com/bryandowen/gohottub/queue"
+	"gohottub/queue"
+	//"github.com/bryandowen/gohottub/relays"
+	"gohottub/relays"
+	//"github.com/bryandowen/gohottub/thermometer"
+	"gohottub/thermometer"
 	//	"github.com/davecgh/go-spew/spew"; // for debugging!
 )
 
