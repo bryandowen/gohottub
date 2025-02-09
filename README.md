@@ -44,6 +44,23 @@ cd scripts
 ./install
 ```
 
+Now logs will be rotated weekly, and you can use ```systemctl``` to manage the service:
+```
+systemctl status gohottub.service       # See if it's running properly
+sudo systemctl restart gohottub.service # bounce
+sudo systemctl stop gohottub.service    # stop
+sudo systemctl start gohottub.service   # start
+sudo systemctl disable gohottub.service # Stop it from automatically running on boot
+sudo systemctl enable gohottub.service  # Set it to start running automatically again
+```
+
+## MONITORING
+You'll want to be able to check up on the service to make sure it's running properly
+```
+tail -f /var/log/gohottub/gohottub.log # Watch current output
+systemctl status gohottub.service      # Make sure services hasn't died
+```
+
 ## FOR DEVELOPMENT
 ```
 cd ..
